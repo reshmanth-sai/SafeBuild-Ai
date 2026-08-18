@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Query, HTTPException, status
+from fastapi import FastAPI, Depends, Query, HTTPException, status, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -31,6 +31,40 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# WebSocket Connection Manager for Fast-Path Push Notifications
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in list(self.active_connections):
+            try:
+                await connection.send_json(message)
+            except Exception:
+                self.disconnect(connection)
+
+manager = ConnectionManager()
+
+@app.websocket("/ws/events")
+async def websocket_events_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception:
+        manager.disconnect(websocket)
+
+
 # Note: allow_origins=["*"] is used for local prototype demo only
 app.add_middleware(
     CORSMiddleware,
@@ -45,7 +79,7 @@ def read_root():
     return {"message": "SafeBuild AI Backend API is running."}
 
 @app.post("/events/safety", response_model=SafetyEventResponse, status_code=status.HTTP_201_CREATED)
-def create_safety_event(event_in: SafetyEventCreate, db: Session = Depends(get_db)):
+async def create_safety_event(event_in: SafetyEventCreate, db: Session = Depends(get_db)):
     """
     Ingest a new safety violation event from the CV detection pipeline.
     """
@@ -61,6 +95,7 @@ def create_safety_event(event_in: SafetyEventCreate, db: Session = Depends(get_d
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
+    await manager.broadcast({"source": "safety", "event_id": db_event.id})
     return db_event
 
 @app.get("/events/safety", response_model=List[SafetyEventResponse])
@@ -139,7 +174,7 @@ def get_worker_timeline(worker_id: str, limit: int = Query(50, ge=1, le=100), db
 # EMERGENCY & WEARABLE ENDPOINTS
 # ---------------------------------------------------------------------------
 @app.post("/events/emergency", response_model=EmergencyEventResponse, status_code=status.HTTP_201_CREATED)
-def create_emergency_event(event_in: EmergencyEventCreate, db: Session = Depends(get_db)):
+async def create_emergency_event(event_in: EmergencyEventCreate, db: Session = Depends(get_db)):
     """
     Ingest a new emergency SOS / IMU fall event from wearable band simulator.
     """
@@ -155,6 +190,7 @@ def create_emergency_event(event_in: EmergencyEventCreate, db: Session = Depends
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
+    await manager.broadcast({"source": "emergency", "event_id": db_event.id})
     return db_event
 
 @app.get("/events/emergency", response_model=List[EmergencyEventResponse])
@@ -173,7 +209,7 @@ def get_emergency_events(
     return events
 
 @app.patch("/events/emergency/{event_id}/resolve", response_model=EmergencyEventResponse)
-def resolve_emergency_event(event_id: int, db: Session = Depends(get_db)):
+async def resolve_emergency_event(event_id: int, db: Session = Depends(get_db)):
     """
     Mark an active emergency event as resolved by rescue responders.
     """
@@ -184,6 +220,7 @@ def resolve_emergency_event(event_id: int, db: Session = Depends(get_db)):
     event.status = "resolved"
     db.commit()
     db.refresh(event)
+    await manager.broadcast({"source": "emergency", "event_id": event.id, "action": "resolved"})
     return event
 
 

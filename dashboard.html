@@ -676,9 +676,35 @@
             }
         }
 
+        // WebSocket Fast-Path (Additive - polling remains primary fallback)
+        function initWebSocketFastPath() {
+            const WS_URL = "ws://localhost:8000/ws/events";
+            let socket = null;
+
+            function connect() {
+                try {
+                    socket = new WebSocket(WS_URL);
+                    socket.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            if (data.source === 'safety') {
+                                pollBackend();
+                            }
+                        } catch (e) {}
+                    };
+                    socket.onclose = () => { setTimeout(connect, 5000); };
+                    socket.onerror = () => { if (socket) socket.close(); };
+                } catch (e) {
+                    setTimeout(connect, 5000);
+                }
+            }
+            connect();
+        }
+
         // Initial poll on page load + periodic 1.5s interval polling
         pollBackend();
         setInterval(pollBackend, POLL_INTERVAL_MS);
+        initWebSocketFastPath();
     </script>
 </body>
 </html>
