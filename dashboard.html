@@ -451,8 +451,13 @@
                 <button class="filter-btn" onclick="setFilter('ZONE_INTRUSION')">Zone Intrusions</button>
                 <button class="filter-btn" onclick="setFilter('PPE')">PPE Violations</button>
             </div>
-            <div class="last-updated-text">
-                Last Poll: <span id="lastPollTime">--:--:--</span>
+            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                <div class="confidence-caption" style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                    <span style="color: var(--accent-blue);">ℹ️</span> <span>Confidence reflects model certainty per detection — lower values indicate less certain readings</span>
+                </div>
+                <div class="last-updated-text">
+                    Last Poll: <span id="lastPollTime">--:--:--</span>
+                </div>
             </div>
         </div>
 
@@ -466,7 +471,7 @@
                         <th>Event Type</th>
                         <th>Track ID</th>
                         <th>Severity</th>
-                        <th>Confidence</th>
+                        <th title="Confidence reflects model certainty per detection">Confidence ℹ️</th>
                         <th>Zone Location</th>
                     </tr>
                 </thead>
@@ -588,6 +593,9 @@
                 const icon = EVENT_ICONS[ev.event_type] || '⚠️';
                 const severityClass = (ev.severity === 'HIGH') ? 'badge-high' : 'badge-medium';
                 const confPct = Math.round(ev.confidence * 100);
+                const confGradient = confPct >= 80 ? 'linear-gradient(90deg, #22c55e, #10b981)' 
+                                    : confPct >= 60 ? 'linear-gradient(90deg, #38bdf8, #3b82f6)' 
+                                    : 'linear-gradient(90deg, #f97316, #ef4444)';
                 const relTime = formatRelativeTime(ev.timestamp);
                 const isNew = ev.id > previousMaxId;
 
@@ -606,7 +614,7 @@
                         <td>
                             <div class="conf-container">
                                 <div class="conf-bar-bg">
-                                    <div class="conf-bar-fill" style="width: ${confPct}%;"></div>
+                                    <div class="conf-bar-fill" style="width: ${confPct}%; background: ${confGradient};"></div>
                                 </div>
                                 <span class="mono" style="font-size: 12px;">${confPct}%</span>
                             </div>
