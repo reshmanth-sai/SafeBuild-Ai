@@ -1,0 +1,8 @@
+# Custom ByteTrack tracker with increased track_buffer for SafeBuild AI
+tracker_type: bytetrack
+track_high_thresh: 0.25
+track_low_thresh: 0.1
+new_track_thresh: 0.25
+track_buffer: 90  # Increased from 30 to 90 (~3s at 30fps) to keep lost tracks alive through confidence dips
+match_thresh: 0.8
+fuse_score: True

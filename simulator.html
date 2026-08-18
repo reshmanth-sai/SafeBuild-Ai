@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeBuild AI — Wearable Smart Band Simulator</title>
+    <!-- Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --surface-dark: #121826;
+            --card-bg: #1a2234;
+            --card-border: #26334d;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger-red: #ef4444;
+            --danger-hover: #dc2626;
+            --warning-orange: #f97316;
+            --warning-hover: #ea580c;
+            --success-green: #22c55e;
+            --accent-blue: #38bdf8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        .simulator-card {
+            width: 100%;
+            max-width: 520px;
+            background: var(--surface-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .sim-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 20px;
+        }
+
+        .sim-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+        }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* FORM CONTROLS */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+        }
+
+        input, select {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .slider-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--accent-blue);
+            float: right;
+        }
+
+        /* EMERGENCY ACTION BUTTONS */
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-sos {
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-sos:hover {
+            background: linear-gradient(135deg, #f87171, #dc2626);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-sos:active {
+            transform: translateY(0);
+        }
+
+        .btn-fall {
+            background: linear-gradient(135deg, #f97316, #c2410c);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-fall:hover {
+            background: linear-gradient(135deg, #fb923c, #ea580c);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.4);
+        }
+
+        /* RESPONSE LOG BOX */
+        .response-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .response-box.success {
+            border-color: rgba(34, 197, 94, 0.4);
+            color: var(--success-green);
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .response-box.error {
+            border-color: rgba(239, 68, 68, 0.4);
+            color: var(--danger-red);
+            background: rgba(239, 68, 68, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="simulator-card">
+        <div class="sim-header">
+            <div class="sim-icon">📡</div>
+            <div>
+                <h1>Smart Safety Band Simulator</h1>
+                <div class="subtitle">LoRaWAN / Cellular IoT Emergency Telemetry Transmitter</div>
+            </div>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="workerId">Worker ID</label>
+                <input type="text" id="workerId" value="W001" placeholder="e.g. W001">
+            </div>
+            <div class="form-group">
+                <label for="bandId">Band ID</label>
+                <input type="text" id="bandId" value="B001" placeholder="e.g. B001">
+            </div>
+            <div class="form-group full-width">
+                <label for="zone">Current Location / Zone</label>
+                <input type="text" id="zone" value="Zone A - Tower 2 (3rd Floor)" placeholder="Zone Name">
+            </div>
+            <div class="form-group">
+                <label for="battery">Battery Level <span class="slider-val" id="batteryVal">78%</span></label>
+                <input type="range" id="battery" min="5" max="100" value="78" oninput="document.getElementById('batteryVal').textContent = this.value + '%'">
+            </div>
+            <div class="form-group">
+                <label for="rssi">Signal Strength RSSI <span class="slider-val" id="rssiVal">-67 dBm</span></label>
+                <input type="range" id="rssi" min="-110" max="-40" value="-67" oninput="document.getElementById('rssiVal').textContent = this.value + ' dBm'">
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-sos" onclick="triggerEmergency('SOS')">
+                <span>🚨</span> PRESS SOS PANIC BUTTON
+            </button>
+            <button class="btn btn-fall" onclick="triggerEmergency('IMU_FALL')">
+                <span>💥</span> SIMULATE HARD FALL (IMU)
+            </button>
+        </div>
+
+        <div class="response-box" id="responseBox">
+            Ready to transmit emergency telemetry...
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = "http://localhost:8000/events/emergency";
+
+        async function triggerEmergency(eventType) {
+            const workerId = document.getElementById('workerId').value.trim() || "W001";
+            const bandId = document.getElementById('bandId').value.trim() || "B001";
+            const zone = document.getElementById('zone').value.trim() || "Zone A - General";
+            const battery = parseInt(document.getElementById('battery').value, 10);
+            const rssi = parseInt(document.getElementById('rssi').value, 10);
+
+            const responseBox = document.getElementById('responseBox');
+            responseBox.className = "response-box";
+            responseBox.textContent = `Transmitting ${eventType} packet to backend...`;
+
+            const payload = {
+                worker_id: workerId,
+                band_id: bandId,
+                event_type: eventType,
+                battery: battery,
+                rssi: rssi,
+                zone: zone
+            };
+
+            try {
+                const res = await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+                responseBox.className = "response-box success";
+                responseBox.textContent = `✅ Transmitted ${eventType}! Event #${data.id} registered (Status: ${data.status.toUpperCase()})`;
+            } catch (err) {
+                responseBox.className = "response-box error";
+                responseBox.textContent = `⚠️ Failed to transmit: ${err.message} (Is backend running on port 8000?)`;
+                console.warn("[Simulator Warning] Backend unreachable:", err);
+            }
+        }
+    </script>
+</body>
+</html>

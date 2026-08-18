@@ -1,0 +1,32 @@
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache and byte-code
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+*.db
+backend/safety.db
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Internal AI / Memory cache
+.ijfw/
+ijfw/
+
+# IDE & Editor Settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log

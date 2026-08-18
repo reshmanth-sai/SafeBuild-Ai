@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeBuild AI — Rescue & Emergency Dispatch Terminal</title>
+    <!-- Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #0a0505;
+            --surface-dark: #170d0d;
+            --card-bg: #241414;
+            --card-border: #3d1c1c;
+            --text-main: #fef2f2;
+            --text-muted: #fca5a5;
+            --danger-red: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.4);
+            --danger-bg: rgba(239, 68, 68, 0.15);
+            --success-green: #22c55e;
+            --resolved-gray: #4b5563;
+            --resolved-bg: #1f2937;
+            --accent-amber: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 24px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* HEADER */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, #2b0c0c, #170d0d);
+            border: 1px solid #571919;
+            padding: 20px 28px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2);
+        }
+
+        .header-box {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #ef4444, #991b1b);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.5);
+            animation: pulse-icon 2s infinite;
+        }
+
+        @keyframes pulse-icon {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* STATUS BADGE */
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .status-badge.connected {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--success-green);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .status-badge.disconnected {
+            background: var(--danger-bg);
+            color: var(--danger-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .status-badge.connected .pulse-dot { background: var(--success-green); box-shadow: 0 0 10px var(--success-green); }
+        .status-badge.disconnected .pulse-dot { background: var(--danger-red); box-shadow: 0 0 10px var(--danger-red); }
+
+        /* COUNTER SUMMARY ROW */
+        .counter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .counter-card {
+            background: var(--surface-dark);
+            border: 1px solid var(--card-border);
+            padding: 20px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .counter-card.active-emergency {
+            border-color: var(--danger-red);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), var(--surface-dark));
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.25);
+        }
+
+        .counter-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .counter-value {
+            font-size: 36px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* EMERGENCY EVENTS FEED */
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .events-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .event-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            transition: all 0.3s ease;
+        }
+
+        /* OPEN ACTIVE EMERGENCY CARD STYLING */
+        .event-card.status-open {
+            border-color: var(--danger-red);
+            background: linear-gradient(135deg, #331010, #1f0b0b);
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+            animation: pulse-card-border 2s infinite;
+        }
+
+        @keyframes pulse-card-border {
+            0% { border-color: rgba(239, 68, 68, 0.6); }
+            50% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 25px rgba(239, 68, 68, 0.5); }
+            100% { border-color: rgba(239, 68, 68, 0.6); }
+        }
+
+        /* RESOLVED CARD STYLING */
+        .event-card.status-resolved {
+            background: var(--resolved-bg);
+            border-color: #374151;
+            opacity: 0.65;
+        }
+
+        .event-left-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .event-type-badge {
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.04em;
+        }
+
+        .type-sos {
+            background: rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            border: 1px solid var(--danger-red);
+        }
+
+        .type-fall {
+            background: rgba(245, 158, 11, 0.25);
+            color: #fde68a;
+            border: 1px solid var(--accent-amber);
+        }
+
+        .worker-details {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .worker-id {
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .location-zone {
+            font-size: 13px;
+            color: var(--accent-amber);
+            font-weight: 500;
+        }
+
+        .telemetry-row {
+            display: flex;
+            gap: 24px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .telemetry-item strong {
+            color: var(--text-main);
+        }
+
+        /* RESOLVE BUTTON */
+        .btn-resolve {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+        }
+
+        .btn-resolve:hover {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+        }
+
+        .status-tag {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .tag-open {
+            background: var(--danger-red);
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+        }
+
+        .tag-resolved {
+            background: #4b5563;
+            color: #d1d5db;
+        }
+
+        .empty-state {
+            background: var(--surface-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <header>
+            <div class="header-box">
+                <div class="brand-icon">🚑</div>
+                <div>
+                    <h1>SafeBuild AI — Rescue & Emergency Dispatch</h1>
+                    <div class="subtitle">Real-time SOS & Wearable Fall Telemetry Command Terminal</div>
+                </div>
+            </div>
+            <div id="statusBadge" class="status-badge disconnected">
+                <span class="pulse-dot"></span>
+                <span id="statusText">CONNECTING...</span>
+            </div>
+        </header>
+
+        <!-- COUNTERS SUMMARY -->
+        <div class="counter-grid">
+            <div class="counter-card active-emergency" id="openCard">
+                <div>
+                    <div class="counter-title">Active Emergencies</div>
+                    <div class="counter-value" id="openCount" style="color: var(--danger-red);">0</div>
+                </div>
+                <div style="font-size: 32px;">🚨</div>
+            </div>
+            <div class="counter-card">
+                <div>
+                    <div class="counter-title">Resolved Incidents</div>
+                    <div class="counter-value" id="resolvedCount" style="color: var(--success-green);">0</div>
+                </div>
+                <div style="font-size: 32px;">✅</div>
+            </div>
+            <div class="counter-card">
+                <div>
+                    <div class="counter-title">Total Transmissions</div>
+                    <div class="counter-value" id="totalCount" style="color: var(--text-main);">0</div>
+                </div>
+                <div style="font-size: 32px;">📡</div>
+            </div>
+        </div>
+
+        <!-- EVENTS FEED -->
+        <div class="feed-header">
+            <span>LIVE EMERGENCY DISPATCH STREAM</span>
+            <span>Auto-refreshing every 1.5s</span>
+        </div>
+
+        <div class="events-grid" id="eventsContainer">
+            <div class="empty-state">
+                <div class="empty-icon">🛰️</div>
+                <div>Listening for emergency telemetry signals...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT POLLING & RESOLUTION logic -->
+    <script>
+        const API_URL = "http://localhost:8000/events/emergency?limit=50";
+        const POLL_INTERVAL_MS = 1500;
+
+        let emergencyEvents = [];
+
+        function formatRelativeTime(isoString) {
+            try {
+                const date = new Date(isoString);
+                const now = new Date();
+                const diffSec = Math.floor((now - date) / 1000);
+
+                if (isNaN(diffSec) || diffSec < 0) return "Just now";
+                if (diffSec < 60) return `${diffSec}s ago`;
+                if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+                return date.toLocaleTimeString();
+            } catch (e) {
+                return isoString;
+            }
+        }
+
+        async function resolveEvent(eventId, event) {
+            event.stopPropagation();
+            try {
+                const res = await fetch(`http://localhost:8000/events/emergency/${eventId}/resolve`, {
+                    method: 'PATCH'
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                
+                // Immediately refresh poll
+                pollEmergencyEvents();
+            } catch (err) {
+                alert(`Could not resolve emergency #${eventId}: ${err.message}`);
+            }
+        }
+
+        function renderEmergencyEvents() {
+            const container = document.getElementById('eventsContainer');
+            
+            const openEvents = emergencyEvents.filter(e => e.status === 'open');
+            const resolvedEvents = emergencyEvents.filter(e => e.status === 'resolved');
+
+            document.getElementById('openCount').textContent = openEvents.length;
+            document.getElementById('resolvedCount').textContent = resolvedEvents.length;
+            document.getElementById('totalCount').textContent = emergencyEvents.length;
+
+            const openCard = document.getElementById('openCard');
+            if (openEvents.length > 0) {
+                openCard.classList.add('active-emergency');
+            } else {
+                openCard.classList.remove('active-emergency');
+            }
+
+            if (emergencyEvents.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🛡️</div>
+                        <div>No emergency telemetry records found.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = emergencyEvents.map(ev => {
+                const isOpen = (ev.status === 'open');
+                const isSos = (ev.event_type === 'SOS');
+                const badgeClass = isSos ? 'type-sos' : 'type-fall';
+                const icon = isSos ? '🚨 SOS PANIC' : '💥 IMU FALL';
+                const timeAgo = formatRelativeTime(ev.created_at);
+
+                return `
+                    <div class="event-card ${isOpen ? 'status-open' : 'status-resolved'}">
+                        <div class="event-left-info">
+                            <div class="event-type-badge ${badgeClass}">
+                                <span>${icon}</span>
+                            </div>
+                            <div class="worker-details">
+                                <div class="worker-id">Worker ID: ${ev.worker_id} <span style="font-size: 13px; font-weight: 400; color: var(--text-muted);">(Band ${ev.band_id})</span></div>
+                                <div class="location-zone">📍 ${ev.zone || 'General Location'}</div>
+                            </div>
+                        </div>
+
+                        <div class="telemetry-row">
+                            <div class="telemetry-item">Battery: <strong>${ev.battery}%</strong></div>
+                            <div class="telemetry-item">RSSI: <strong>${ev.rssi} dBm</strong></div>
+                            <div class="telemetry-item">Time: <strong>${timeAgo}</strong></div>
+                        </div>
+
+                        <div>
+                            ${isOpen ? `
+                                <button class="btn-resolve" onclick="resolveEvent(${ev.id}, event)">
+                                    ✓ MARK RESOLVED
+                                </button>
+                            ` : `
+                                <span class="status-tag tag-resolved">RESOLVED</span>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function pollEmergencyEvents() {
+            const badge = document.getElementById('statusBadge');
+            const statusText = document.getElementById('statusText');
+
+            try {
+                const res = await fetch(API_URL);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+                
+                badge.className = "status-badge connected";
+                statusText.textContent = "DISPATCH CONNECTED";
+
+                emergencyEvents = data;
+                renderEmergencyEvents();
+            } catch (err) {
+                badge.className = "status-badge disconnected";
+                statusText.textContent = "DISPATCH OFFLINE";
+                console.warn("[Rescue Terminal Warning] Backend unreachable:", err);
+            }
+        }
+
+        // Initial poll + 1.5s interval
+        pollEmergencyEvents();
+        setInterval(pollEmergencyEvents, POLL_INTERVAL_MS);
+    </script>
+</body>
+</html>

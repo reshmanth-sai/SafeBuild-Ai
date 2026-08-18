@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeBuild AI — Live Safety Dashboard</title>
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-dark: #090d16;
+            --surface-dark: #121826;
+            --card-bg: #1a2234;
+            --card-border: #26334d;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+            --danger-red: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.15);
+            --warning-orange: #f97316;
+            --warning-bg: rgba(249, 115, 22, 0.15);
+            --success-green: #22c55e;
+            --success-bg: rgba(34, 197, 94, 0.15);
+            --purple-accent: #a855f7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 24px;
+            line-height: 1.5;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* HEADER SECTION */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface-dark);
+            border: 1px solid var(--card-border);
+            padding: 20px 28px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .header-title-box {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* CONNECTION STATUS INDICATOR */
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .status-badge.connected {
+            background: var(--success-bg);
+            color: var(--success-green);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .status-badge.disconnected {
+            background: var(--danger-bg);
+            color: var(--danger-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-badge.connected .pulse-dot {
+            background-color: var(--success-green);
+            box-shadow: 0 0 10px var(--success-green);
+            animation: pulse-green 1.8s infinite;
+        }
+
+        .status-badge.disconnected .pulse-dot {
+            background-color: var(--danger-red);
+            box-shadow: 0 0 10px var(--danger-red);
+            animation: pulse-red 1.2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* STATS GRID */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: var(--surface-dark);
+            border: 1px solid var(--card-border);
+            padding: 20px;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: #3b82f6;
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .stat-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .stat-icon {
+            font-size: 18px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-main);
+        }
+
+        .stat-footer {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        /* FEED CONTROLS & FILTER BAR */
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: var(--surface-dark);
+            border: 1px solid var(--card-border);
+            padding: 14px 20px;
+            border-radius: 14px;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #3b82f6;
+        }
+
+        .last-updated-text {
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-muted);
+        }
+
+        /* LIVE EVENT TABLE */
+        .table-container {
+            background: var(--surface-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        thead {
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        th {
+            padding: 16px 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        tbody tr {
+            border-bottom: 1px solid rgba(38, 51, 77, 0.6);
+            transition: background 0.15s ease;
+        }
+
+        tbody tr:hover {
+            background: rgba(30, 41, 59, 0.6);
+        }
+
+        tbody tr.new-event-flash {
+            animation: highlight-row 1.5s ease-out;
+        }
+
+        @keyframes highlight-row {
+            0% { background: rgba(59, 130, 246, 0.35); }
+            100% { background: transparent; }
+        }
+
+        td {
+            padding: 16px 20px;
+            font-size: 14px;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* SEVERITY BADGES */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-high {
+            background: var(--danger-bg);
+            color: var(--danger-red);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .badge-medium {
+            background: var(--warning-bg);
+            color: var(--warning-orange);
+            border: 1px solid rgba(249, 115, 22, 0.4);
+        }
+
+        .badge-low {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+        }
+
+        /* EVENT TYPE PILLS */
+        .event-type-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        /* CONFIDENCE BAR */
+        .conf-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .conf-bar-bg {
+            width: 70px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .conf-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #3b82f6);
+            border-radius: 3px;
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- HEADER -->
+        <header>
+            <div class="header-title-box">
+                <div class="brand-icon">🛡️</div>
+                <div>
+                    <h1>SafeBuild AI — Live Safety Dashboard</h1>
+                    <div class="subtitle">Real-time Computer Vision Safety Compliance & Incident Telemetry</div>
+                </div>
+            </div>
+            <div id="statusBadge" class="status-badge disconnected">
+                <span class="pulse-dot"></span>
+                <span id="statusText">CONNECTING TO BACKEND...</span>
+            </div>
+        </header>
+
+        <!-- SUMMARY STATS ROW -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">Total Incidents</span>
+                    <span class="stat-icon">📊</span>
+                </div>
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-footer">Recorded events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">Missing Helmet</span>
+                    <span class="stat-icon">🪖</span>
+                </div>
+                <div class="stat-value" id="statHelmet" style="color: var(--warning-orange);">0</div>
+                <div class="stat-footer">PPE non-compliance</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">Missing Vest</span>
+                    <span class="stat-icon">🦺</span>
+                </div>
+                <div class="stat-value" id="statVest" style="color: var(--warning-orange);">0</div>
+                <div class="stat-footer">PPE non-compliance</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">Zone Intrusion</span>
+                    <span class="stat-icon">⚠️</span>
+                </div>
+                <div class="stat-value" id="statZone" style="color: var(--danger-red);">0</div>
+                <div class="stat-footer">Restricted area breaches</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">Fall Detected</span>
+                    <span class="stat-icon">🚨</span>
+                </div>
+                <div class="stat-value" id="statFall" style="color: var(--danger-red);">0</div>
+                <div class="stat-footer">Critical safety alerts</div>
+            </div>
+        </div>
+
+        <!-- CONTROLS & FILTERS -->
+        <div class="controls-bar">
+            <div class="filter-group">
+                <button class="filter-btn active" onclick="setFilter('ALL')">All Events</button>
+                <button class="filter-btn" onclick="setFilter('FALL_DETECTED')">Fall Detected</button>
+                <button class="filter-btn" onclick="setFilter('ZONE_INTRUSION')">Zone Intrusions</button>
+                <button class="filter-btn" onclick="setFilter('PPE')">PPE Violations</button>
+            </div>
+            <div class="last-updated-text">
+                Last Poll: <span id="lastPollTime">--:--:--</span>
+            </div>
+        </div>
+
+        <!-- LIVE EVENT FEED TABLE -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Timestamp</th>
+                        <th>Event Type</th>
+                        <th>Track ID</th>
+                        <th>Severity</th>
+                        <th>Confidence</th>
+                        <th>Zone Location</th>
+                    </tr>
+                </thead>
+                <tbody id="eventsTableBody">
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-icon">📡</div>
+                            <div>Connecting to safety event telemetry feed...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT POLLING & DOM RENDERING -->
+    <script>
+        const API_URL = "http://localhost:8000/events/safety?limit=50";
+        const POLL_INTERVAL_MS = 1500;
+
+        let currentEvents = [];
+        let activeFilter = 'ALL';
+        let previousMaxId = 0;
+
+        const EVENT_ICONS = {
+            'MISSING_HELMET': '🪖',
+            'MISSING_VEST': '🦺',
+            'ZONE_INTRUSION': '⚠️',
+            'FALL_DETECTED': '🚨'
+        };
+
+        function setFilter(filterType) {
+            activeFilter = filterType;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.toUpperCase().includes(filterType) || (filterType === 'ALL' && btn.textContent === 'All Events'));
+            });
+            renderEventsTable();
+        }
+
+        function formatRelativeTime(isoString) {
+            try {
+                const eventDate = new Date(isoString);
+                const now = new Date();
+                const diffSec = Math.floor((now - eventDate) / 1000);
+
+                if (isNaN(diffSec) || diffSec < 0) return "Just now";
+                if (diffSec < 60) return `${diffSec}s ago`;
+                if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+                return eventDate.toLocaleTimeString();
+            } catch (e) {
+                return isoString;
+            }
+        }
+
+        function updateStats(events) {
+            document.getElementById('statTotal').textContent = events.length;
+            document.getElementById('statHelmet').textContent = events.filter(e => e.event_type === 'MISSING_HELMET').length;
+            document.getElementById('statVest').textContent = events.filter(e => e.event_type === 'MISSING_VEST').length;
+            document.getElementById('statZone').textContent = events.filter(e => e.event_type === 'ZONE_INTRUSION').length;
+            document.getElementById('statFall').textContent = events.filter(e => e.event_type === 'FALL_DETECTED').length;
+        }
+
+        function renderEventsTable() {
+            const tbody = document.getElementById('eventsTableBody');
+
+            let filtered = currentEvents;
+            if (activeFilter === 'FALL_DETECTED') {
+                filtered = currentEvents.filter(e => e.event_type === 'FALL_DETECTED');
+            } else if (activeFilter === 'ZONE_INTRUSION') {
+                filtered = currentEvents.filter(e => e.event_type === 'ZONE_INTRUSION');
+            } else if (activeFilter === 'PPE') {
+                filtered = currentEvents.filter(e => e.event_type === 'MISSING_HELMET' || e.event_type === 'MISSING_VEST');
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div class="empty-icon">🛡️</div>
+                            <div>No safety events match the active filter.</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(ev => {
+                const icon = EVENT_ICONS[ev.event_type] || '⚠️';
+                const severityClass = (ev.severity === 'HIGH') ? 'badge-high' : 'badge-medium';
+                const confPct = Math.round(ev.confidence * 100);
+                const relTime = formatRelativeTime(ev.timestamp);
+                const isNew = ev.id > previousMaxId;
+
+                return `
+                    <tr class="${isNew ? 'new-event-flash' : ''}">
+                        <td class="mono" style="color: var(--text-muted);">#${ev.id}</td>
+                        <td class="mono">${relTime} <span style="color: var(--text-muted); font-size: 11px;">(${new Date(ev.timestamp).toLocaleTimeString()})</span></td>
+                        <td>
+                            <span class="event-type-pill">
+                                <span>${icon}</span>
+                                <span>${ev.event_type.replace('_', ' ')}</span>
+                            </span>
+                        </td>
+                        <td class="mono">Track ${ev.track_id}</td>
+                        <td><span class="badge ${severityClass}">${ev.severity}</span></td>
+                        <td>
+                            <div class="conf-container">
+                                <div class="conf-bar-bg">
+                                    <div class="conf-bar-fill" style="width: ${confPct}%;"></div>
+                                </div>
+                                <span class="mono" style="font-size: 12px;">${confPct}%</span>
+                            </div>
+                        </td>
+                        <td>${ev.zone ? `<span style="color: var(--accent-blue); font-weight: 500;">${ev.zone}</span>` : '<span style="color: var(--text-muted);">General Feed</span>'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function pollBackend() {
+            const badge = document.getElementById('statusBadge');
+            const statusText = document.getElementById('statusText');
+            const lastPollText = document.getElementById('lastPollTime');
+
+            lastPollText.textContent = new Date().toLocaleTimeString();
+
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+
+                // Update connection status badge to CONNECTED
+                badge.className = "status-badge connected";
+                statusText.textContent = "LIVE CONNECTED";
+
+                currentEvents = data;
+                updateStats(data);
+                renderEventsTable();
+
+                if (data.length > 0) {
+                    previousMaxId = Math.max(...data.map(e => e.id));
+                }
+            } catch (err) {
+                // Graceful fallback when backend is unreachable
+                badge.className = "status-badge disconnected";
+                statusText.textContent = "BACKEND UNREACHABLE (Retrying...)";
+                console.warn("[Dashboard Poll Warning] Backend unreachable:", err.message);
+            }
+        }
+
+        // Initial poll on page load + periodic 1.5s interval polling
+        pollBackend();
+        setInterval(pollBackend, POLL_INTERVAL_MS);
+    </script>
+</body>
+</html>
