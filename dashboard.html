@@ -395,6 +395,14 @@
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-header">
+                    <span class="stat-title">Site Risk Score</span>
+                    <span class="stat-icon">🛡️</span>
+                </div>
+                <div class="stat-value" id="statRiskScore" style="color: var(--success-green);">0</div>
+                <div class="stat-footer" id="statRiskLabel" style="color: var(--success-green); font-weight: 600;">LOW</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
                     <span class="stat-title">Total Incidents</span>
                     <span class="stat-icon">📊</span>
                 </div>
@@ -514,11 +522,42 @@
         }
 
         function updateStats(events) {
+            const helmetCount = events.filter(e => e.event_type === 'MISSING_HELMET').length;
+            const vestCount = events.filter(e => e.event_type === 'MISSING_VEST').length;
+            const zoneCount = events.filter(e => e.event_type === 'ZONE_INTRUSION').length;
+            const fallCount = events.filter(e => e.event_type === 'FALL_DETECTED').length;
+
             document.getElementById('statTotal').textContent = events.length;
-            document.getElementById('statHelmet').textContent = events.filter(e => e.event_type === 'MISSING_HELMET').length;
-            document.getElementById('statVest').textContent = events.filter(e => e.event_type === 'MISSING_VEST').length;
-            document.getElementById('statZone').textContent = events.filter(e => e.event_type === 'ZONE_INTRUSION').length;
-            document.getElementById('statFall').textContent = events.filter(e => e.event_type === 'FALL_DETECTED').length;
+            document.getElementById('statHelmet').textContent = helmetCount;
+            document.getElementById('statVest').textContent = vestCount;
+            document.getElementById('statZone').textContent = zoneCount;
+            document.getElementById('statFall').textContent = fallCount;
+
+            // Site Risk Score computation (0-100 scale, capped at 100)
+            const rawScore = (helmetCount * 10) + (vestCount * 10) + (zoneCount * 20) + (fallCount * 40);
+            const score = Math.min(100, Math.max(0, rawScore));
+
+            let riskLevel = 'LOW';
+            let riskColor = 'var(--success-green)';
+
+            if (score > 60) {
+                riskLevel = 'HIGH';
+                riskColor = 'var(--danger-red)';
+            } else if (score > 30) {
+                riskLevel = 'MEDIUM';
+                riskColor = 'var(--warning-orange)';
+            }
+
+            const riskValElem = document.getElementById('statRiskScore');
+            const riskLabelElem = document.getElementById('statRiskLabel');
+            if (riskValElem) {
+                riskValElem.textContent = score;
+                riskValElem.style.color = riskColor;
+            }
+            if (riskLabelElem) {
+                riskLabelElem.textContent = riskLevel;
+                riskLabelElem.style.color = riskColor;
+            }
         }
 
         function renderEventsTable() {
