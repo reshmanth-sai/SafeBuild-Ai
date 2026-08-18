@@ -1,0 +1,6 @@
+ultralytics
+fastapi[standard]
+opencv-python
+numpy
+SQLAlchemy
+huggingface_hub
