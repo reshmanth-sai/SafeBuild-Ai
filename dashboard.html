@@ -393,13 +393,16 @@
 
         <!-- SUMMARY STATS ROW -->
         <div class="stats-grid">
-            <div class="stat-card">
+            <div class="stat-card" title="Site Risk Score calculated from events in the last 3 minutes">
                 <div class="stat-header">
                     <span class="stat-title">Site Risk Score</span>
                     <span class="stat-icon">🛡️</span>
                 </div>
                 <div class="stat-value" id="statRiskScore" style="color: var(--success-green);">0</div>
-                <div class="stat-footer" id="statRiskLabel" style="color: var(--success-green); font-weight: 600;">LOW</div>
+                <div class="stat-footer">
+                    <span id="statRiskLabel" style="color: var(--success-green); font-weight: 600;">LOW</span>
+                    <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">(3-min window)</span>
+                </div>
             </div>
             <div class="stat-card">
                 <div class="stat-header">
@@ -538,8 +541,24 @@
             document.getElementById('statZone').textContent = zoneCount;
             document.getElementById('statFall').textContent = fallCount;
 
-            // Site Risk Score computation (0-100 scale, capped at 100)
-            const rawScore = (helmetCount * 10) + (vestCount * 10) + (zoneCount * 20) + (fallCount * 40);
+            // Site Risk Score rolling calculation (events within last 3 minutes)
+            const THREE_MINUTES_MS = 3 * 60 * 1000;
+            const now = new Date();
+
+            const recentEvents = events.filter(e => {
+                const tsStr = e.timestamp || e.created_at;
+                if (!tsStr) return false;
+                const eventDate = new Date(tsStr);
+                const ageMs = now - eventDate;
+                return ageMs >= 0 && ageMs <= THREE_MINUTES_MS;
+            });
+
+            const rHelmet = recentEvents.filter(e => e.event_type === 'MISSING_HELMET').length;
+            const rVest = recentEvents.filter(e => e.event_type === 'MISSING_VEST').length;
+            const rZone = recentEvents.filter(e => e.event_type === 'ZONE_INTRUSION').length;
+            const rFall = recentEvents.filter(e => e.event_type === 'FALL_DETECTED').length;
+
+            const rawScore = (rHelmet * 10) + (rVest * 10) + (rZone * 20) + (rFall * 40);
             const score = Math.min(100, Math.max(0, rawScore));
 
             let riskLevel = 'LOW';
