@@ -49,6 +49,57 @@
             gap: 24px;
         }
 
+        /* TOP NAV */
+        .top-nav {
+            background: var(--surface-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .top-nav-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .top-nav-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .top-nav-link {
+            text-decoration: none;
+            color: var(--text-muted);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .top-nav-link:hover {
+            color: #ffffff;
+            border-color: #b91c1c;
+            background: #7f1d1d;
+        }
+
+        .top-nav-link.active {
+            color: #ffffff;
+            border-color: #ef4444;
+            background: #991b1b;
+        }
+
         /* HEADER */
         header {
             display: flex;
@@ -173,6 +224,37 @@
             font-size: 14px;
             font-weight: 600;
             color: var(--text-muted);
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .alert-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .alert-note {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .btn-alert-enable {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fecaca;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-alert-enable:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.7);
         }
 
         .events-grid {
@@ -436,6 +518,15 @@
 </head>
 <body>
     <div class="container">
+        <nav class="top-nav" aria-label="Primary">
+            <div class="top-nav-title">Frontend Navigation</div>
+            <div class="top-nav-links">
+                <a class="top-nav-link" href="./index.html">Live Dashboard</a>
+                <a class="top-nav-link active" href="./rescue_dashboard.html">Rescue Dashboard</a>
+                <a class="top-nav-link" href="./timeline.html">Incident Timeline</a>
+            </div>
+        </nav>
+
         <!-- HEADER -->
         <header>
             <div class="header-box">
@@ -490,7 +581,10 @@
         <!-- EVENTS FEED -->
         <div class="feed-header">
             <span>LIVE EMERGENCY DISPATCH STREAM</span>
-            <span>Auto-refreshing every 1.5s</span>
+            <div class="alert-controls">
+                <button id="enableAlertsBtn" class="btn-alert-enable" type="button">Enable Alert Sound + Push</button>
+                <span class="alert-note" id="alertStatusText">Auto-refreshing every 1.5s</span>
+            </div>
         </div>
 
         <div class="events-grid" id="eventsContainer">
@@ -507,6 +601,112 @@
         const POLL_INTERVAL_MS = 1500;
 
         let emergencyEvents = [];
+        let hasPrimedExistingEvents = false;
+        const seenEmergencyIds = new Set();
+        const ALERT_EVENT_TYPES = new Set(['SOS', 'IMU_FALL']);
+        let audioCtx = null;
+
+        function isAlertIncident(ev) {
+            return ev && ev.status === 'open' && ALERT_EVENT_TYPES.has(ev.event_type);
+        }
+
+        function setAlertStatus(text) {
+            const statusEl = document.getElementById('alertStatusText');
+            if (statusEl) statusEl.textContent = text;
+        }
+
+        async function requestPushPermissionIfNeeded() {
+            if (!('Notification' in window)) return 'unsupported';
+            if (Notification.permission === 'granted') return 'granted';
+            if (Notification.permission === 'denied') return 'denied';
+
+            try {
+                return await Notification.requestPermission();
+            } catch (e) {
+                console.warn('[Alert Warning] Notification permission request failed:', e);
+                return 'default';
+            }
+        }
+
+        function ensureAudioContext() {
+            if (audioCtx) return audioCtx;
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return null;
+            audioCtx = new AudioCtx();
+            return audioCtx;
+        }
+
+        async function playShortSiren() {
+            const ctx = ensureAudioContext();
+            if (!ctx) {
+                console.warn('[Alert Warning] WebAudio API unavailable in this browser.');
+                return;
+            }
+
+            if (ctx.state === 'suspended') {
+                try {
+                    await ctx.resume();
+                } catch (e) {
+                    console.warn('[Alert Warning] Audio context resume blocked:', e);
+                    return;
+                }
+            }
+
+            const durationSec = 1.2;
+            const now = ctx.currentTime;
+
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(0.16, now + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
+            gain.connect(ctx.destination);
+
+            const osc = ctx.createOscillator();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(580, now);
+            osc.frequency.linearRampToValueAtTime(940, now + 0.3);
+            osc.frequency.linearRampToValueAtTime(520, now + 0.6);
+            osc.frequency.linearRampToValueAtTime(900, now + 0.9);
+            osc.frequency.linearRampToValueAtTime(560, now + durationSec);
+            osc.connect(gain);
+
+            osc.start(now);
+            osc.stop(now + durationSec + 0.02);
+        }
+
+        async function notifyCriticalIncident(newAlerts) {
+            if (!newAlerts || newAlerts.length === 0) return;
+
+            const first = newAlerts[0];
+            const title = newAlerts.length === 1
+                ? `Emergency Alert: ${first.event_type}`
+                : `Emergency Alert: ${newAlerts.length} new incidents`;
+            const body = newAlerts.length === 1
+                ? `${first.worker_id || 'Unknown Worker'} • ${first.zone || 'General Location'} • Band ${first.band_id || 'N/A'}`
+                : `Latest: ${first.event_type} (${first.worker_id || 'Unknown Worker'})`;
+
+            const permission = await requestPushPermissionIfNeeded();
+            if (permission === 'granted') {
+                try {
+                    new Notification(title, {
+                        body,
+                        tag: 'safebuild-emergency-alert',
+                        renotify: true,
+                        requireInteraction: false
+                    });
+                } catch (e) {
+                    console.warn('[Alert Warning] Push notification failed:', e);
+                }
+            }
+
+            await playShortSiren();
+        }
+
+        async function enableAlertCapabilities() {
+            await requestPushPermissionIfNeeded();
+            await playShortSiren();
+            setAlertStatus('Emergency alerts enabled • Auto-refreshing every 1.5s');
+        }
 
         function formatRelativeTime(isoString) {
             try {
@@ -669,6 +869,19 @@
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
                 const data = await res.json();
+
+                const newCriticalAlerts = [];
+                if (!hasPrimedExistingEvents) {
+                    data.forEach(ev => seenEmergencyIds.add(ev.id));
+                    hasPrimedExistingEvents = true;
+                } else {
+                    data.forEach(ev => {
+                        if (!seenEmergencyIds.has(ev.id)) {
+                            seenEmergencyIds.add(ev.id);
+                            if (isAlertIncident(ev)) newCriticalAlerts.push(ev);
+                        }
+                    });
+                }
                 
                 badge.className = "status-badge connected";
                 statusText.textContent = "DISPATCH CONNECTED";
@@ -676,6 +889,10 @@
                 emergencyEvents = data;
                 renderEmergencyEvents();
                 pollBandStatus();
+
+                if (newCriticalAlerts.length > 0) {
+                    notifyCriticalIncident(newCriticalAlerts);
+                }
             } catch (err) {
                 badge.className = "status-badge disconnected";
                 statusText.textContent = "DISPATCH OFFLINE";
@@ -709,6 +926,7 @@
         }
 
         // Initial poll + 1.5s interval
+        document.getElementById('enableAlertsBtn')?.addEventListener('click', enableAlertCapabilities);
         pollEmergencyEvents();
         setInterval(pollEmergencyEvents, POLL_INTERVAL_MS);
         initWebSocketFastPath();

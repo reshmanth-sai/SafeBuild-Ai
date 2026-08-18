@@ -50,6 +50,57 @@
             gap: 24px;
         }
 
+        /* TOP NAV */
+        .top-nav {
+            background: var(--surface-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .top-nav-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .top-nav-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .top-nav-link {
+            text-decoration: none;
+            color: var(--text-muted);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .top-nav-link:hover {
+            color: #ffffff;
+            border-color: #4f46e5;
+            background: #4338ca;
+        }
+
+        .top-nav-link.active {
+            color: #ffffff;
+            border-color: #8b5cf6;
+            background: #6366f1;
+        }
+
         /* HEADER */
         header {
             display: flex;
@@ -387,6 +438,15 @@
 </head>
 <body>
     <div class="container">
+        <nav class="top-nav" aria-label="Primary">
+            <div class="top-nav-title">Frontend Navigation</div>
+            <div class="top-nav-links">
+                <a class="top-nav-link" href="./index.html">Live Dashboard</a>
+                <a class="top-nav-link" href="./rescue_dashboard.html">Rescue Dashboard</a>
+                <a class="top-nav-link active" href="./timeline.html">Incident Timeline</a>
+            </div>
+        </nav>
+
         <!-- HEADER -->
         <header>
             <div class="header-title-box">

@@ -1,22 +1,3 @@
-"""
-Day 1 — Pretrained PPE Detection & Multi-Object Tracking on Webcam
--------------------------------------------------------------------
-Goal: Build end-to-end CV pipeline with multi-object tracking, PPE compliance,
-danger zone intrusion alerts, and debounced incident reporting.
-
-Model Used: Hexmon/vyra-yolo-ppe-detection (YOLOv8 fine-tuned for PPE)
-Tracker Used: custom_bytetrack.yaml (track_buffer=90 for stable ID persistence)
-
-Classes (14):
-  0: Fall-Detected, 1: Gloves, 2: Goggles, 3: Hardhat, 4: Ladder, 5: Mask,
-  6: NO-Gloves, 7: NO-Goggles, 8: NO-Hardhat, 9: NO-Mask, 10: NO-Safety Vest,
-  11: Person, 12: Safety Cone, 13: Safety Vest
-
-Run with:
-    python day1_ppe_webcam.py
-Press 'q' in the video window to quit.
-"""
-
 from ultralytics import YOLO
 from huggingface_hub import hf_hub_download
 import cv2
@@ -24,14 +5,11 @@ import numpy as np
 import time
 from collections import deque
 
-# ---------------------------------------------------------------------------
-# 1. LOAD THE MODEL & TRACKER
-# ---------------------------------------------------------------------------
 HF_REPO_ID = "Hexmon/vyra-yolo-ppe-detection"
 HF_FILENAME = "best.pt"
-CONFIDENCE_THRESHOLD = 0.25  # tuned for real-time webcam detection
-TRACKER_CONFIG = "custom_bytetrack.yaml"  # custom ByteTrack with track_buffer=90
-TRACK_BUFFER_FRAMES = 90.0  # matches track_buffer in custom_bytetrack.yaml
+CONFIDENCE_THRESHOLD = 0.25
+TRACKER_CONFIG = "custom_bytetrack.yaml"
+TRACK_BUFFER_FRAMES = 90.0
 
 try:
     weights_path = hf_hub_download(repo_id=HF_REPO_ID, filename=HF_FILENAME)
@@ -61,9 +39,6 @@ WORKER_CLASS_IDS = {
     FALL_DETECTED_CLS_ID,
 }
 
-# ---------------------------------------------------------------------------
-# 2. OPEN THE WEBCAM (Deferred to runtime)
-# ---------------------------------------------------------------------------
 cap = None
 
 def init_webcam():
