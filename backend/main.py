@@ -5,12 +5,20 @@ from datetime import datetime, timezone
 
 try:
     from backend.database import Base, engine, get_db
-    from backend.models import SafetyEvent, EmergencyEvent
-    from backend.schemas import SafetyEventCreate, SafetyEventResponse, EmergencyEventCreate, EmergencyEventResponse
+    from backend.models import SafetyEvent, EmergencyEvent, BandHeartbeat
+    from backend.schemas import (
+        SafetyEventCreate, SafetyEventResponse,
+        EmergencyEventCreate, EmergencyEventResponse,
+        HeartbeatCreate, HeartbeatResponse, BandStatusResponse
+    )
 except ModuleNotFoundError:
     from database import Base, engine, get_db
-    from models import SafetyEvent, EmergencyEvent
-    from schemas import SafetyEventCreate, SafetyEventResponse, EmergencyEventCreate, EmergencyEventResponse
+    from models import SafetyEvent, EmergencyEvent, BandHeartbeat
+    from schemas import (
+        SafetyEventCreate, SafetyEventResponse,
+        EmergencyEventCreate, EmergencyEventResponse,
+        HeartbeatCreate, HeartbeatResponse, BandStatusResponse
+    )
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -177,4 +185,103 @@ def resolve_emergency_event(event_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(event)
     return event
+
+
+# ---------------------------------------------------------------------------
+# HEARTBEAT & LIVENESS ENDPOINTS
+# ---------------------------------------------------------------------------
+@app.post("/events/heartbeat", response_model=HeartbeatResponse, status_code=status.HTTP_201_CREATED)
+def create_heartbeat(hb_in: HeartbeatCreate, db: Session = Depends(get_db)):
+    """
+    Ingest a periodic liveness heartbeat packet from a smart safety band.
+    """
+    db_hb = BandHeartbeat(
+        worker_id=hb_in.worker_id,
+        band_id=hb_in.band_id,
+        battery=hb_in.battery,
+        rssi=hb_in.rssi,
+        zone=hb_in.zone
+    )
+    db.add(db_hb)
+    db.commit()
+    db.refresh(db_hb)
+    return db_hb
+
+
+@app.get("/bands/status", response_model=List[BandStatusResponse])
+def get_bands_status(db: Session = Depends(get_db)):
+    """
+    Retrieve live liveness/heartbeat status for all known wearable bands.
+    Combines latest heartbeat and emergency event timestamps to determine
+    if a band is ONLINE (<=10s), WARNING (10s-30s), or SIGNAL LOST (>30s).
+    """
+    heartbeats = db.query(BandHeartbeat).all()
+    emergencies = db.query(EmergencyEvent).all()
+
+    now = datetime.now(timezone.utc)
+    band_map = {}
+
+    def _ensure_utc(dt):
+        if dt is None:
+            return now
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    for hb in heartbeats:
+        bid = hb.band_id
+        dt = _ensure_utc(hb.created_at)
+        if bid not in band_map or dt > band_map[bid]["time"]:
+            band_map[bid] = {
+                "band_id": bid,
+                "worker_id": hb.worker_id,
+                "battery": hb.battery,
+                "rssi": hb.rssi,
+                "zone": hb.zone,
+                "time": dt,
+                "type": "HEARTBEAT"
+            }
+
+    for em in emergencies:
+        bid = em.band_id
+        dt = _ensure_utc(em.created_at)
+        if bid not in band_map or dt > band_map[bid]["time"]:
+            band_map[bid] = {
+                "band_id": bid,
+                "worker_id": em.worker_id,
+                "battery": em.battery,
+                "rssi": em.rssi,
+                "zone": em.zone,
+                "time": dt,
+                "type": em.event_type
+            }
+
+    result = []
+    for bid, data in sorted(band_map.items()):
+        elapsed = max(0.0, (now - data["time"]).total_seconds())
+        if elapsed <= 10.0:
+            lbl = "ONLINE"
+            clr = "green"
+        elif elapsed <= 30.0:
+            lbl = "WARNING"
+            clr = "amber"
+        else:
+            lbl = "SIGNAL LOST"
+            clr = "red"
+
+        result.append(BandStatusResponse(
+            band_id=data["band_id"],
+            worker_id=data["worker_id"],
+            battery=data["battery"],
+            rssi=data["rssi"],
+            zone=data["zone"],
+            last_signal_time=data["time"],
+            last_signal_type=data["type"],
+            last_seen_seconds=round(elapsed, 1),
+            status_label=lbl,
+            status_color=clr
+        ))
+
+    return result
+
 

@@ -327,6 +327,111 @@
             margin-bottom: 12px;
             opacity: 0.5;
         }
+
+        /* WEARABLE BAND LIVENESS PANEL */
+        .band-status-section {
+            background: var(--surface-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .band-status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .band-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .band-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .band-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .band-id-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text-main);
+        }
+
+        .band-status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+
+        .status-dot-green {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success-green);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+        }
+        .status-dot-amber {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent-amber);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+        .status-dot-red {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger-red);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            animation: pulse-red-border 1.5s infinite;
+        }
+
+        @keyframes pulse-red-border {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .band-details-row {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .empty-band-state {
+            color: var(--text-muted);
+            font-size: 13px;
+            padding: 12px 0;
+            text-align: center;
+            grid-column: 1 / -1;
+        }
     </style>
 </head>
 <body>
@@ -368,6 +473,17 @@
                     <div class="counter-value" id="totalCount" style="color: var(--text-main);">0</div>
                 </div>
                 <div style="font-size: 32px;">📡</div>
+            </div>
+        </div>
+
+        <!-- WEARABLE BAND LIVENESS PANEL -->
+        <div class="band-status-section">
+            <div class="band-status-header">
+                <span>WEARABLE SMART BAND LIVENESS MONITOR</span>
+                <span style="font-size: 11px; font-weight: 400;">Signal Thresholds: 🟢 &le;10s (ONLINE) | 🟡 10–30s (WARNING) | 🔴 &gt;30s (SIGNAL LOST)</span>
+            </div>
+            <div class="band-cards-grid" id="bandCardsGrid">
+                <div class="empty-band-state">Listening for smart band telemetry signals...</div>
             </div>
         </div>
 
@@ -488,6 +604,62 @@
             }).join('');
         }
 
+        const BANDS_STATUS_API = "http://localhost:8000/bands/status";
+
+        async function pollBandStatus() {
+            try {
+                const res = await fetch(BANDS_STATUS_API);
+                if (!res.ok) return;
+                const bands = await res.json();
+                renderBandStatus(bands);
+            } catch (e) {
+                console.warn("[Band Status Poll Warning]:", e);
+            }
+        }
+
+        function renderBandStatus(bands) {
+            const grid = document.getElementById('bandCardsGrid');
+            if (!grid) return;
+
+            if (!bands || bands.length === 0) {
+                grid.innerHTML = `<div class="empty-band-state">No wearable smart bands detected yet. Start the simulator or send a heartbeat.</div>`;
+                return;
+            }
+
+            grid.innerHTML = bands.map(b => {
+                const dotClass = b.status_color === 'green' ? 'status-dot-green'
+                               : b.status_color === 'amber' ? 'status-dot-amber'
+                               : 'status-dot-red';
+                const pulseIcon = b.status_color === 'green' ? '🟢'
+                                : b.status_color === 'amber' ? '🟡'
+                                : '🔴';
+
+                const secAgo = Math.round(b.last_seen_seconds);
+                const seenText = secAgo === 0 ? "Just now" : `${secAgo}s ago`;
+
+                return `
+                    <div class="band-card">
+                        <div class="band-card-header">
+                            <div class="band-id-tag">Band ${b.band_id} <span style="font-weight:400; font-size:13px; color:var(--text-muted);">(${b.worker_id})</span></div>
+                            <div class="band-status-indicator ${dotClass}">
+                                <span>${pulseIcon}</span>
+                                <span>${b.status_label}</span>
+                            </div>
+                        </div>
+                        <div class="band-details-row">
+                            <span>🔋 Bat: <strong>${b.battery}%</strong></span>
+                            <span>📶 RSSI: <strong>${b.rssi} dBm</strong></span>
+                        </div>
+                        <div class="band-details-row">
+                            <span>Last Signal: <strong>${b.last_signal_type}</strong></span>
+                            <span>Last seen: <strong>${seenText}</strong></span>
+                        </div>
+                        ${b.zone ? `<div style="font-size:11px; color:var(--accent-amber); font-weight:500;">📍 ${b.zone}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
         async function pollEmergencyEvents() {
             const badge = document.getElementById('statusBadge');
             const statusText = document.getElementById('statusText');
@@ -503,6 +675,7 @@
 
                 emergencyEvents = data;
                 renderEmergencyEvents();
+                pollBandStatus();
             } catch (err) {
                 badge.className = "status-badge disconnected";
                 statusText.textContent = "DISPATCH OFFLINE";

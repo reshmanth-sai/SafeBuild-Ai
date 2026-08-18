@@ -185,6 +185,37 @@
             box-shadow: 0 8px 20px rgba(249, 115, 22, 0.4);
         }
 
+        .btn-heartbeat {
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-heartbeat:hover {
+            background: linear-gradient(135deg, #38bdf8, #3b82f6);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        .auto-hb-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            font-size: 13px;
+            color: var(--text-main);
+            margin-bottom: 14px;
+            cursor: pointer;
+        }
+
+        .auto-hb-container input {
+            cursor: pointer;
+        }
+
         /* RESPONSE LOG BOX */
         .response-box {
             background: var(--card-bg);
@@ -221,7 +252,7 @@
             <div class="sim-icon">📡</div>
             <div>
                 <h1>Smart Safety Band Simulator</h1>
-                <div class="subtitle">LoRaWAN / Cellular IoT Emergency Telemetry Transmitter</div>
+                <div class="subtitle">LoRaWAN / Cellular IoT Emergency & Telemetry Transmitter</div>
             </div>
         </div>
 
@@ -249,6 +280,9 @@
         </div>
 
         <div class="action-buttons">
+            <button class="btn btn-heartbeat" onclick="sendHeartbeat()">
+                <span>💓</span> SEND LIVENESS HEARTBEAT
+            </button>
             <button class="btn btn-sos" onclick="triggerEmergency('SOS')">
                 <span>🚨</span> PRESS SOS PANIC BUTTON
             </button>
@@ -257,6 +291,11 @@
             </button>
         </div>
 
+        <label class="auto-hb-container">
+            <input type="checkbox" id="autoHbToggle" onchange="toggleAutoHeartbeat(this.checked)">
+            <span><strong>Auto-send Heartbeat</strong> every 5 seconds (Keep-Alive)</span>
+        </label>
+
         <div class="response-box" id="responseBox">
             Ready to transmit emergency telemetry...
         </div>
@@ -264,6 +303,57 @@
 
     <script>
         const BACKEND_URL = "http://localhost:8000/events/emergency";
+        const HEARTBEAT_URL = "http://localhost:8000/events/heartbeat";
+        let autoHbInterval = null;
+
+        async function sendHeartbeat() {
+            const workerId = document.getElementById('workerId').value.trim() || "W001";
+            const bandId = document.getElementById('bandId').value.trim() || "B001";
+            const zone = document.getElementById('zone').value.trim() || "Zone A - General";
+            const battery = parseInt(document.getElementById('battery').value, 10);
+            const rssi = parseInt(document.getElementById('rssi').value, 10);
+
+            const responseBox = document.getElementById('responseBox');
+            responseBox.className = "response-box";
+            responseBox.textContent = `Transmitting Heartbeat packet to backend...`;
+
+            const payload = {
+                worker_id: workerId,
+                band_id: bandId,
+                battery: battery,
+                rssi: rssi,
+                zone: zone
+            };
+
+            try {
+                const res = await fetch(HEARTBEAT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+                responseBox.className = "response-box success";
+                responseBox.textContent = `💓 Heartbeat sent for Band ${data.band_id} (${data.worker_id})! #${data.id}`;
+            } catch (err) {
+                responseBox.className = "response-box error";
+                responseBox.textContent = `⚠️ Heartbeat failed: ${err.message}`;
+            }
+        }
+
+        function toggleAutoHeartbeat(enabled) {
+            if (autoHbInterval) {
+                clearInterval(autoHbInterval);
+                autoHbInterval = null;
+            }
+
+            if (enabled) {
+                sendHeartbeat(); // send immediately
+                autoHbInterval = setInterval(sendHeartbeat, 5000);
+            }
+        }
 
         async function triggerEmergency(eventType) {
             const workerId = document.getElementById('workerId').value.trim() || "W001";

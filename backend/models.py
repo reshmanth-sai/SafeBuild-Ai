@@ -30,3 +30,15 @@ class EmergencyEvent(Base):
     zone = Column(String, nullable=True)
     status = Column(String, nullable=False, default="open", index=True)  # "open" or "resolved"
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class BandHeartbeat(Base):
+    __tablename__ = "band_heartbeats"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    worker_id = Column(String, nullable=False, index=True)
+    band_id = Column(String, nullable=False, index=True)
+    battery = Column(Integer, nullable=False, default=100)
+    rssi = Column(Integer, nullable=False, default=-65)
+    zone = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+

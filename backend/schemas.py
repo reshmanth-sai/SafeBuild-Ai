@@ -51,3 +51,33 @@ class EmergencyEventResponse(EmergencyEventCreate):
 
     class Config:
         from_attributes = True
+
+class HeartbeatCreate(BaseModel):
+    worker_id: str = Field(..., description="Worker identifier, e.g. W001")
+    band_id: str = Field(..., description="Wearable band ID, e.g. B001")
+    battery: int = Field(100, description="Battery percentage (0 to 100)")
+    rssi: int = Field(-65, description="Signal strength in dBm")
+    zone: Optional[str] = Field(None, description="Current zone location")
+
+class HeartbeatResponse(HeartbeatCreate):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class BandStatusResponse(BaseModel):
+    band_id: str
+    worker_id: str
+    battery: int
+    rssi: int
+    zone: Optional[str]
+    last_signal_time: datetime
+    last_signal_type: str  # "HEARTBEAT", "SOS", or "IMU_FALL"
+    last_seen_seconds: float
+    status_label: str  # "ONLINE", "WARNING", "SIGNAL LOST"
+    status_color: str  # "green", "amber", "red"
+
+    class Config:
+        from_attributes = True
+
